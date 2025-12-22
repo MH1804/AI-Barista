@@ -39,13 +39,14 @@
         const WEATHER_API_URL = 'https://api.openweathermap.org/data/2.5/weather';
         const WEATHER_API_KEY = 'DEIN_OPENWEATHER_API_SCHLÜSSEL_HIER'; // Ersetze mit deinem OpenWeatherMap API-Schlüssel
         const OPENAI_API_KEY = 'DEIN_OPENAI_API_SCHLÜSSEL_HIER'; // Ersetze mit deinem OpenAI API-Schlüssel (für GPT-4o oder Vision-Modell)
+        const THIRD_WAVE_API = 'https://thirdwavecoffeebase.com/roasters';
 
         // Lern-Gedächtnis und Speicher
         let shots = JSON.parse(localStorage.getItem('shots')) || [];
-        let roasteries = JSON.parse(localStorage.getItem('roasteries')) || ['Beispiel Rösterei 1', 'Beispiel Rösterei 2'];
-        let origins = JSON.parse(localStorage.getItem('origins')) || ['Äthiopien', 'Kolumbien'];
-        let processes = JSON.parse(localStorage.getItem('processes')) || ['Washed', 'Natural'];
-        let roastlevels = JSON.parse(localStorage.getItem('roastlevels')) || ['Light', 'Medium', 'Dark'];
+        let roasteries = JSON.parse(localStorage.getItem('roasteries')) || ['The Barn', 'Five Elephant', 'Bonanza Coffee', 'Manhattan Coffee Roasters', 'Tim Wendelboe', 'Square Mile Coffee'];
+        let origins = JSON.parse(localStorage.getItem('origins')) || ['Äthiopien', 'Kolumbien', 'Brasilien', 'Kenia', 'Guatemala', 'Costa Rica', 'Indonesien'];
+        let processes = JSON.parse(localStorage.getItem('processes')) || ['Washed', 'Natural', 'Honey', 'Anaerobic', 'Semi-Washed', 'Pulped Natural'];
+        let roastlevels = JSON.parse(localStorage.getItem('roastlevels')) || ['Light', 'Medium', 'Medium-Dark', 'Dark', 'City', 'Full City', 'Espresso Roast'];
 
         let currentState = 'ask_roastery';
         let currentData = {
@@ -68,6 +69,20 @@
         const historyBtn = document.getElementById('history-btn');
         const historyDiv = document.getElementById('history');
 
+        // Fetch Roasteries from API on load
+        async function fetchRoasteries() {
+            try {
+                const response = await fetch(THIRD_WAVE_API);
+                const data = await response.json();
+                data.forEach(roaster => {
+                    saveUniqueValue(roasteries, roaster.name, 'roasteries');
+                });
+                updateDatalist('roasteries-list', roasteries);
+            } catch (error) {
+                console.error('Fehler beim Laden der Röstereien:', error);
+            }
+        }
+
         function addMessage(text, sender) {
             const msg = document.createElement('div');
             msg.classList.add('message', sender);
@@ -78,12 +93,14 @@
 
         function updateDatalist(id, options) {
             const datalist = document.getElementById(id);
-            datalist.innerHTML = '';
-            options.forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt;
-                datalist.appendChild(option);
-            });
+            if (datalist) {
+                datalist.innerHTML = '';
+                options.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt;
+                    datalist.appendChild(option);
+                });
+            }
         }
 
         async function getWeather() {
@@ -306,11 +323,11 @@
                 currentState = 'ask_process';
             } else if (currentState === 'ask_process') {
                 currentData.process = text;
-                saveUniqueValue(processes, text, 'processes');
+                // Kein Speichern für process
                 currentState = 'ask_roastlevel';
             } else if (currentState === 'ask_roastlevel') {
                 currentData.roastlevel = text;
-                saveUniqueValue(roastlevels, text, 'roastlevels');
+                // Kein Speichern für roastlevel
                 currentState = 'ask_image';
             } else if (currentState === 'ask_feedback') {
                 const [input, output, time, taste, flow] = text.split(',').map(s => s.trim());
@@ -338,6 +355,9 @@
             dl.id = id;
             document.body.appendChild(dl);
         });
+
+        // Fetch external roasteries
+        fetchRoasteries();
 
         // Start
         processState();
