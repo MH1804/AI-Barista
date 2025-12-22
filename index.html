@@ -17,12 +17,14 @@
         #history-btn { padding: 10px; background: #a0522d; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 10px auto; display: block; }
         #history { max-width: 600px; margin: 20px auto; background: #e3d5ca; padding: 20px; border-radius: 8px; display: none; }
         h1 { text-align: center; color: #4b3832; }
+        input[list] { width: 100%; padding: 10px; border: 1px solid #a0522d; border-radius: 5px; background: #f5f5dc; }
+        input[list]:focus { outline: none; border-color: #8b4513; }
     </style>
 </head>
 <body>
     <h1>Barista Companion</h1>
     <div id="chat"></div>
-    <div id="input-area">
+    <div id="input-area" style="display: none;">
         <input type="text" id="user-input" placeholder="Deine Antwort...">
         <button id="send-btn">Senden</button>
     </div>
@@ -39,7 +41,7 @@
         const WEATHER_API_URL = 'https://api.openweathermap.org/data/2.5/weather';
         const WEATHER_API_KEY = 'DEIN_OPENWEATHER_API_SCHLÜSSEL_HIER'; // Ersetze mit deinem OpenWeatherMap API-Schlüssel
         const OPENAI_API_KEY = 'DEIN_OPENAI_API_SCHLÜSSEL_HIER'; // Ersetze mit deinem OpenAI API-Schlüssel (für GPT-4o oder Vision-Modell)
-        const THIRD_WAVE_API = 'https://thirdwavecoffeebase.com/roasters';
+        const THIRD_WAVE_API = 'https://thirdwavecoffeebase.com/roasters'; // Beispiel-API, passe an wenn nötig
 
         // Lern-Gedächtnis und Speicher
         let shots = JSON.parse(localStorage.getItem('shots')) || [];
@@ -62,6 +64,7 @@
         };
 
         const chat = document.getElementById('chat');
+        const inputArea = document.getElementById('input-area');
         const userInput = document.getElementById('user-input');
         const sendBtn = document.getElementById('send-btn');
         const imageUpload = document.getElementById('image-upload');
@@ -77,18 +80,22 @@
                 data.forEach(roaster => {
                     saveUniqueValue(roasteries, roaster.name, 'roasteries');
                 });
-                updateDatalist('roasteries-list', roasteries);
             } catch (error) {
                 console.error('Fehler beim Laden der Röstereien:', error);
             }
         }
 
-        function addMessage(text, sender) {
+        function addMessage(text, sender, isHTML = false) {
             const msg = document.createElement('div');
             msg.classList.add('message', sender);
-            msg.innerHTML = text; // Für HTML erlauben
+            if (isHTML) {
+                msg.innerHTML = text;
+            } else {
+                msg.textContent = text;
+            }
             chat.appendChild(msg);
             chat.scrollTop = chat.scrollHeight;
+            return msg;
         }
 
         function updateDatalist(id, options) {
@@ -227,23 +234,90 @@
         async function processState() {
             if (currentState === 'ask_roastery') {
                 addMessage('Bitte wähle oder gib die Rösterei ein.', 'agent');
-                addMessage('<input type="text" id="roastery-input" list="roasteries-list" placeholder="Rösterei...">', 'agent');
+                const inputMsg = addMessage('', 'agent');
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = 'roastery-input';
+                input.list = 'roasteries-list';
+                input.placeholder = 'Rösterei...';
+                input.autofocus = true;
+                input.onchange = () => {
+                    currentData.roastery = input.value.trim();
+                    if (currentData.roastery) {
+                        saveUniqueValue(roasteries, currentData.roastery, 'roasteries');
+                        addMessage(currentData.roastery, 'user');
+                        currentState = 'ask_origin';
+                        processState();
+                    }
+                };
+                inputMsg.appendChild(input);
                 updateDatalist('roasteries-list', roasteries);
+                input.focus();
             } else if (currentState === 'ask_origin') {
                 addMessage('Bitte wähle oder gib die Herkunft ein.', 'agent');
-                addMessage('<input type="text" id="origin-input" list="origins-list" placeholder="Herkunft...">', 'agent');
+                const inputMsg = addMessage('', 'agent');
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = 'origin-input';
+                input.list = 'origins-list';
+                input.placeholder = 'Herkunft...';
+                input.autofocus = true;
+                input.onchange = () => {
+                    currentData.origin = input.value.trim();
+                    if (currentData.origin) {
+                        saveUniqueValue(origins, currentData.origin, 'origins');
+                        addMessage(currentData.origin, 'user');
+                        currentState = 'ask_process';
+                        processState();
+                    }
+                };
+                inputMsg.appendChild(input);
                 updateDatalist('origins-list', origins);
+                input.focus();
             } else if (currentState === 'ask_process') {
                 addMessage('Bitte wähle oder gib die Aufbereitung ein.', 'agent');
-                addMessage('<input type="text" id="process-input" list="processes-list" placeholder="Aufbereitung...">', 'agent');
+                const inputMsg = addMessage('', 'agent');
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = 'process-input';
+                input.list = 'processes-list';
+                input.placeholder = 'Aufbereitung...';
+                input.autofocus = true;
+                input.onchange = () => {
+                    currentData.process = input.value.trim();
+                    if (currentData.process) {
+                        addMessage(currentData.process, 'user');
+                        currentState = 'ask_roastlevel';
+                        processState();
+                    }
+                };
+                inputMsg.appendChild(input);
                 updateDatalist('processes-list', processes);
+                input.focus();
             } else if (currentState === 'ask_roastlevel') {
                 addMessage('Bitte wähle oder gib den Röstgrad ein.', 'agent');
-                addMessage('<input type="text" id="roastlevel-input" list="roastlevels-list" placeholder="Röstgrad...">', 'agent');
+                const inputMsg = addMessage('', 'agent');
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = 'roastlevel-input';
+                input.list = 'roastlevels-list';
+                input.placeholder = 'Röstgrad...';
+                input.autofocus = true;
+                input.onchange = () => {
+                    currentData.roastlevel = input.value.trim();
+                    if (currentData.roastlevel) {
+                        addMessage(currentData.roastlevel, 'user');
+                        currentState = 'ask_image';
+                        processState();
+                    }
+                };
+                inputMsg.appendChild(input);
                 updateDatalist('roastlevels-list', roastlevels);
+                input.focus();
             } else if (currentState === 'ask_image') {
                 addMessage('Bitte lade ein aktuelles Bild der ganzen Bohnen hoch.', 'agent');
                 imageUpload.style.display = 'block';
+                imageUpload.focus();
                 imageUpload.onchange = async (e) => {
                     const file = e.target.files[0];
                     try {
@@ -261,6 +335,7 @@
             } else if (currentState === 'ask_roastdate') {
                 addMessage('Bitte wähle das Röstdatum.', 'agent');
                 dateInput.style.display = 'block';
+                dateInput.focus();
                 dateInput.onchange = (e) => {
                     currentData.roastdate = e.target.value;
                     addMessage(`Röstdatum: ${currentData.roastdate}`, 'user');
@@ -286,10 +361,11 @@
 
                 currentData.recommendation = { dose, target, ratio, grind };
 
-                addMessage(`Empfehlung:<br>- Dosis: ${dose} g<br>- Zielgetränk: ${target} g<br>- Brühverhältnis: ${ratio}<br>- Mahlgrad: ${grind}<br>Begründung: Basierend auf Bohnenalter (${age} Tage), Wetter (Temp: ${weather.temp}°C, Feuchtigkeit: ${weather.humidity}%), KI-Bildanalyse (Röstgrad: ${currentData.imageAnalysis.roast}, Oberfläche: ${currentData.imageAnalysis.surface}, Uniformität: ${currentData.imageAnalysis.uniformity}) und Referenzen.`, 'agent');
+                addMessage(`Empfehlung:<br>- Dosis: ${dose} g<br>- Zielgetränk: ${target} g<br>- Brühverhältnis: ${ratio}<br>- Mahlgrad: ${grind}<br>Begründung: Basierend auf Bohnenalter (${age} Tage), Wetter (Temp: ${weather.temp}°C, Feuchtigkeit: ${weather.humidity}%), KI-Bildanalyse (Röstgrad: ${currentData.imageAnalysis.roast}, Oberfläche: ${currentData.imageAnalysis.surface}, Uniformität: ${currentData.imageAnalysis.uniformity}) und Referenzen.`, 'agent', true);
 
                 currentState = 'ask_feedback';
                 addMessage('Bitte gib Feedback zum Shot: Input (g), Output (g), Durchlaufzeit (s), Geschmack (sauer/ausgewogen/bitter), Fluss (zu schnell/gleichmäßig/stockend). Trenne mit Kommas.', 'agent');
+                inputArea.style.display = 'flex';
             } else if (currentState === 'process_feedback') {
                 shots.push({ ...currentData });
                 localStorage.setItem('shots', JSON.stringify(shots));
@@ -297,7 +373,8 @@
                 addMessage('Danke für das Feedback. Shot gespeichert. Möchtest du einen neuen Shot optimieren? (ja/nein)', 'agent');
                 currentState = 'restart';
             } else if (currentState === 'restart') {
-                if (userInput.value.toLowerCase() === 'ja') {
+                inputArea.style.display = 'none';
+                if (userInput.value.toLowerCase().trim() === 'ja') {
                     currentData = { roastery: '', origin: '', process: '', roastlevel: '', roastdate: '', imageAnalysis: {}, weather: {}, recommendation: {}, feedback: {} };
                     currentState = 'ask_roastery';
                     processState();
@@ -313,28 +390,13 @@
             addMessage(text, 'user');
             userInput.value = '';
 
-            if (currentState === 'ask_roastery') {
-                currentData.roastery = text;
-                saveUniqueValue(roasteries, text, 'roasteries');
-                currentState = 'ask_origin';
-            } else if (currentState === 'ask_origin') {
-                currentData.origin = text;
-                saveUniqueValue(origins, text, 'origins');
-                currentState = 'ask_process';
-            } else if (currentState === 'ask_process') {
-                currentData.process = text;
-                // Kein Speichern für process
-                currentState = 'ask_roastlevel';
-            } else if (currentState === 'ask_roastlevel') {
-                currentData.roastlevel = text;
-                // Kein Speichern für roastlevel
-                currentState = 'ask_image';
-            } else if (currentState === 'ask_feedback') {
+            if (currentState === 'ask_feedback') {
                 const [input, output, time, taste, flow] = text.split(',').map(s => s.trim());
                 currentData.feedback = { input, output, time, taste, flow };
                 currentState = 'process_feedback';
+                inputArea.style.display = 'flex'; // Bleibt für restart
             } else if (currentState === 'restart') {
-                // Handled above
+                // Handled in processState
             }
             processState();
         };
