@@ -114,8 +114,8 @@ small {
 /* ---------- DATA ---------- */
 
 const defaults = {
-  roasteries: ['The Barn', 'Five Elephant', 'Bonanza', 'Tim Wendelboe'],
-  origins: ['Äthiopien', 'Kolumbien', 'Kenia', 'Brasilien'],
+  roasteries: ['Bonanza', 'Kaffeemacher'],
+  origins: ['Äthiopien', 'Kolumbien', 'Kenia', 'Brasilien', 'Guatemala'],
   processes: ['Washed', 'Natural', 'Honey', 'Anaerobic'],
   roastlevels: ['Light', 'Medium', 'Dark']
 };
@@ -162,7 +162,7 @@ function render() {
   if (step === 'roastery') {
     card.innerHTML = `
       <h2>Rösterei</h2>
-      <input list="roasteries" id="input" placeholder="z.B. The Barn">
+      <input list="roasteries" id="input" placeholder="z.B. Bonanza">
       <button onclick="next('roastery')">Weiter</button>
     `;
   }
